@@ -14,27 +14,33 @@ body {
   height: 100vh;
   font-family: 'Segoe UI', sans-serif;
   color: white;
-  background: radial-gradient(circle at center, #0b0c29, #1c1c3a, #3a3a6e);
-  animation: bgShift 12s infinite alternate;
+  position: relative;
+  background: #0b0c2a;
 }
 
-@keyframes bgShift {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(30deg); }
-}
-
-canvas {
+/* Aurora Canvas Overlay */
+#auroraCanvas {
   position: fixed;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
+}
+
+/* Stars Canvas */
+#stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
 #gameArea {
   position: relative;
   width: 100%;
   height: 100%;
-  z-index: 1;
+  z-index: 2;
 }
 
 h1 {
@@ -44,7 +50,7 @@ h1 {
   text-align: center;
   font-size: clamp(1.5rem, 4vw, 3rem);
   text-shadow: 0 0 20px gold;
-  z-index: 2;
+  z-index: 3;
 }
 
 .bubble {
@@ -74,7 +80,7 @@ h1 {
   background: rgba(0,0,0,0.6);
   text-align: center;
   box-shadow: 0 0 30px cyan;
-  z-index: 3;
+  z-index: 4;
 }
 
 #messageBox {
@@ -104,6 +110,7 @@ h1 {
 
 <body>
 
+<canvas id="auroraCanvas"></canvas>
 <canvas id="stars"></canvas>
 
 <h1>❄️ Onyedikachi Promise Says ✨</h1>
@@ -122,38 +129,85 @@ h1 {
 </audio>
 
 <script>
-/* ------------------ MUSIC (mobile safe) ------------------ */
+/* ------------------ MUSIC ------------------ */
 document.body.addEventListener('pointerdown', () => {
   document.getElementById('music').play().catch(()=>{});
 }, { once: true });
 
+/* ------------------ AURORA EFFECT ------------------ */
+const auroraCanvas = document.getElementById('auroraCanvas');
+const aCtx = auroraCanvas.getContext('2d');
+function resizeAurora() {
+  auroraCanvas.width = window.innerWidth;
+  auroraCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeAurora);
+resizeAurora();
+
+let auroras = [];
+for (let i = 0; i < 6; i++) {
+  auroras.push({
+    x: Math.random()*auroraCanvas.width,
+    y: Math.random()*auroraCanvas.height/2,
+    width: 600 + Math.random()*300,
+    height: 200 + Math.random()*150,
+    angle: Math.random()*Math.PI*2,
+    speed: 0.002 + Math.random()*0.003,
+    color: `hsla(${Math.random()*360}, 100%, 50%, 0.15)`
+  });
+}
+
+function drawAurora() {
+  aCtx.clearRect(0,0,auroraCanvas.width, auroraCanvas.height);
+  auroras.forEach(a => {
+    a.angle += a.speed;
+    aCtx.save();
+    aCtx.translate(a.x, a.y);
+    aCtx.rotate(Math.sin(a.angle)*0.3);
+    const grad = aCtx.createLinearGradient(-a.width/2, 0, a.width/2, 0);
+    grad.addColorStop(0, 'rgba(0,255,255,0.15)');
+    grad.addColorStop(0.3, 'rgba(255,0,255,0.15)');
+    grad.addColorStop(0.6, 'rgba(255,215,0,0.15)');
+    grad.addColorStop(1, 'rgba(0,255,255,0.15)');
+    aCtx.fillStyle = grad;
+    aCtx.beginPath();
+    aCtx.ellipse(0, 0, a.width, a.height, 0, 0, Math.PI*2);
+    aCtx.fill();
+    aCtx.restore();
+  });
+  requestAnimationFrame(drawAurora);
+}
+drawAurora();
+
 /* ------------------ CONSTELLATIONS ------------------ */
-const canvas = document.getElementById('stars');
-const ctx = canvas.getContext('2d');
-resize();
-window.addEventListener('resize', resize);
+const starsCanvas = document.getElementById('stars');
+const ctx = starsCanvas.getContext('2d');
+function resizeStars(){
+  starsCanvas.width = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeStars);
+resizeStars();
 
 let stars = Array.from({length: 70}, () => ({
-  x: Math.random()*canvas.width,
-  y: Math.random()*canvas.height,
+  x: Math.random()*starsCanvas.width,
+  y: Math.random()*starsCanvas.height,
   r: Math.random()*2+1,
   vx: Math.random()*0.3-0.15,
   vy: Math.random()*0.3-0.15
 }));
 
-function drawStars() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = 'white';
-
-  stars.forEach(s => {
-    s.x += s.vx; s.y += s.vy;
-    if(s.x<0||s.x>canvas.width) s.vx*=-1;
-    if(s.y<0||s.y>canvas.height) s.vy*=-1;
+function drawStars(){
+  ctx.clearRect(0,0,starsCanvas.width,starsCanvas.height);
+  ctx.fillStyle='white';
+  stars.forEach(s=>{
+    s.x+=s.vx; s.y+=s.vy;
+    if(s.x<0||s.x>starsCanvas.width) s.vx*=-1;
+    if(s.y<0||s.y>starsCanvas.height) s.vy*=-1;
     ctx.beginPath();
     ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
     ctx.fill();
   });
-
   for(let i=0;i<stars.length;i++){
     for(let j=i+1;j<stars.length;j++){
       let dx=stars[i].x-stars[j].x;
@@ -171,11 +225,6 @@ function drawStars() {
   requestAnimationFrame(drawStars);
 }
 drawStars();
-
-function resize(){
-  canvas.width=window.innerWidth;
-  canvas.height=window.innerHeight;
-}
 
 /* ------------------ BUBBLE GAME ------------------ */
 const messages=[
@@ -195,7 +244,6 @@ const box=document.getElementById('messageBox');
 const final=document.getElementById('finalMessage');
 
 let bubbles=[];
-
 messages.forEach(msg=>{
   let b=document.createElement('div');
   b.className='bubble';
@@ -215,12 +263,11 @@ messages.forEach(msg=>{
     popped++;
     if(popped===messages.length) showFinal();
   };
-
   area.appendChild(b);
   bubbles.push(b);
 });
 
-function move(){
+function moveBubbles(){
   bubbles.forEach(b=>{
     if(b.popped) return;
     b.x+=b.vx; b.y+=b.vy;
@@ -229,11 +276,10 @@ function move(){
     b.style.left=b.x+'px';
     b.style.top=b.y+'px';
   });
-  requestAnimationFrame(move);
+  requestAnimationFrame(moveBubbles);
 }
-move();
+moveBubbles();
 
-/* ------------------ AUTO FINALE ------------------ */
 setTimeout(()=>{ if(!finale) showFinal(); },20000);
 
 function showFinal(){
